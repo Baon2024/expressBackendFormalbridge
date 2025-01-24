@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import Stripe from "stripe"; // Correct way to import Stripe in ES modules
 import cors from 'cors';
 import { render } from "@react-email/render";
+import sendEmailToNotifySeller from "./emails/ticketSoldEmail.js";
 
 //import APIFunctionsForBackend from '../backend/APIFunctionsForBackend.js';
 //const APIFunctionsForBackend = import('./APIFunctionsForBackend'); 
@@ -52,13 +53,15 @@ app.post("/api/send-email", async (req, res) => {
     console.log(req.body)
     //stdout.write(req.body); 
 if (!req.body.type) {
-  const { email, name } = req.body;
+  const { email, ticket } = req.body;
+
+  console.log("email and body at /api/send-email' backend are:", email);
 
   try {
     // Render the email template using React Email
     //const emailHtml = render(<WelcomeEmail name={name} />);
 
-    if (!email || !name) {
+    if (!email) {
         return res.status(400).json({ success: false, message: "Email and name are required." });
       }
     
@@ -66,8 +69,8 @@ if (!req.body.type) {
     const emailHtml = `
     <html>
       <body>
-        <h1>Welcome, ${name}!</h1>
-        <p>Thank you for joining us at our website. We're excited to have you!</p>
+        <h1>Welcome!</h1>
+        <p>Your ticket has been sold!</p>
       </body>
     </html>
   `;
@@ -77,7 +80,7 @@ if (!req.body.type) {
     const response = await resend.emails.send({
       from: "Acme <onboarding@resend.dev>",
       to: email,
-      subject: "Verify your email",
+      subject: "Ticket bought",
       html: emailHtml,
     });
 
@@ -145,8 +148,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   
       const accountLink = await stripe.accountLinks.create({
         account: account,
-        return_url: `http://localhost:3006/userPage/undefined`,
-        refresh_url: `http://localhost:3006/refresh/${account}`,
+        return_url: `http://localhost:3002/userPage/undefined`, //need to replace with frontend URL
+        refresh_url: `http://localhost:3002/refresh/${account}`, //need to replace with frontend URL
         type: "account_onboarding",
       });
 
@@ -353,6 +356,7 @@ app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
       
       setTicketBought(globalTicket, jwtToken);
       updateBuyerUser(globalTicket, globalUser, jwtToken);
+      sendEmailToNotifySeller(globalTicket);
       //add email function to inform seller, here
       }
       const metadata = session.metadata;

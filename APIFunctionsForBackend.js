@@ -3,6 +3,11 @@
 import fetch from 'node-fetch'; 
 
 
+
+//when I host properly on render, all the localhosts for strapi abckend need to be upgraded to the proper strapi cloud url
+//created for the backend - render can't make api requests to localhost, which is why it keeps failing
+
+
 export async function setTicketBought(ticket, jwtToken) {
 
     const documentId = ticket.documentId; 
