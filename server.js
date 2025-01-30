@@ -124,6 +124,54 @@ try {
 
 })
 
+app.use('/api/confirm-ticket-listed', async(req, res, next) => {
+  
+    const { user, ticket } = req.body;
+    console.log("user from confirm-ticket-listed are:", user);
+    console.log("ticket from confirm-ticket-listed are:", ticket);
+
+
+    //console.log("ticket is:", ticket);
+
+    const email = user.user.email;
+    console.log("email is:", email);
+
+    //get user and ticket sent from frontend, then 
+    //then
+    const emailHtml = `
+      <html>
+        <body>
+          <h1>Your ticket has been bought!</h1>
+          <p>${ticket.data.formalEventName} has been listed!</p>
+          <p>Price listed: ${ticket.data.formalTicketPrice}</p>
+          <p>Dietary: ${ticket.data.formalTicketDietary}</p>
+          <p>College: ${ticket.data.formalTicketCollege}</p>
+          <p>Date: ${ticket.data.formalTicketDate}</p>
+          <p>Time: ${ticket.data.formalTicketTime}</p>
+          <p></p>
+        </body>
+      </html>
+    `;
+
+    console.log("emailHtml to send is:", emailHtml);
+
+try {
+    // Send the email using Resend API
+    const response = await resend.emails.send({
+        from: "Acme <onboarding@resend.dev>",
+        to: email,
+        subject: "your ticket has been listed",
+        html: emailHtml,
+      });
+
+    console.log("response from confirm-ticket-listed email is:", response);
+  
+      res.status(200).json({ success: true, message: "Email sent!", response });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+})
 
 
 
@@ -356,7 +404,9 @@ app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
       
       setTicketBought(globalTicket, jwtToken);
       updateBuyerUser(globalTicket, globalUser, jwtToken);
+      if (globalTicket.sellerUser.email === 'jb2300@cam.ac.uk') {
       sendEmailToNotifySeller(globalTicket);
+      }
       //add email function to inform seller, here
       }
       const metadata = session.metadata;
