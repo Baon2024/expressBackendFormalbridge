@@ -5,7 +5,7 @@ import { Resend } from "resend";
 import Stripe from "stripe"; // Correct way to import Stripe in ES modules
 import cors from 'cors';
 import { render } from "@react-email/render";
-import sendEmailToNotifySeller from "./emails/ticketSoldEmail.js";
+import { sendEmailToNotifySeller, sendEmailToNotifySellerMultiple } from "./emails/ticketSoldEmail.js";
 
 //import APIFunctionsForBackend from '../backend/APIFunctionsForBackend.js';
 //const APIFunctionsForBackend = import('./APIFunctionsForBackend'); 
@@ -141,8 +141,7 @@ app.use('/api/confirm-ticket-listed', async(req, res, next) => {
     const emailHtml = `
       <html>
         <body>
-          <h1>Your ticket has been bought!</h1>
-          <p>${ticket.data.formalEventName} has been listed!</p>
+          <h1>${ticket.data.formalEventName} has been listed!</h1>
           <p>Price listed: ${ticket.data.formalTicketPrice}</p>
           <p>Dietary: ${ticket.data.formalTicketDietary}</p>
           <p>College: ${ticket.data.formalTicketCollege}</p>
@@ -401,6 +400,7 @@ app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
       console.log("value of token from globalUser,token is:", jwtToken);
 
       if (globalTicket && globalUser) {
+        console.log("globalTicket and glovalUser are:", globalTicket, globalUser);
       
       setTicketBought(globalTicket, jwtToken);
       updateBuyerUser(globalTicket, globalUser, jwtToken);
@@ -413,16 +413,29 @@ app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
       if (metadata) {
         console.log("Metadata exists:", metadata);
       
-
+      
          const ticketIds = metadata.ticketIds.split(',').map(id => (id));
          console.log("ticketIds within checkout.session.completed are:", ticketIds);
          const buyerUserId = session.metadata.buyerUserId;
          console.log("buyerUserId within checkout.session.completed is:", buyerUserId);
+         //const cartData = JSON.parse(session.metadata.simplifiedCart);
+         //console.log("simplifiedCart collection of tickets in webhook backend is:", cartData); // This will be your cart array
+
 
          ticketIds.map((ticketId) => {
           setTicketBoughtMultiple(ticketId, jwtToken);
           updateBuyerUserMultiple(ticketId, buyerUserId, jwtToken);
           //need to add email function to inform sellers, here
+         })
+
+         const cartData = JSON.parse(session.metadata.cart);
+         console.log("simplifiedCart collection of tickets in webhook backend is:", cartData); // This will be your cart array
+
+         cartData.map((ticket) => {
+          console.log("ticket.seller is:", ticket.sellerEmail);
+          if (ticket.sellerEmail === 'jb2300@cam.ac.uk') {
+           sendEmailToNotifySellerMultiple(ticket);
+          }
          })
       }
 
@@ -671,6 +684,43 @@ app.post('/create-checkout-session-multiple', async (req, res) => {
   console.log("user in teh backend is:", user);
   globalUser = user;
 
+  const simplifiedCart = cart.map(({ 
+    id, 
+    documentId, 
+    //createdAt, 
+    //updatedAt, 
+    //publishedAt, 
+    formalTicketPrice, 
+    //formalTicketDietary, 
+    formalTicketCollege, 
+    formalTicketDate, 
+    //formalTicketTime, 
+    //formalTicketID, 
+    formalEventName, 
+    sellerUser
+    //bought 
+  }) => ({
+    id, 
+    documentId, 
+    //createdAt, 
+    //updatedAt, 
+    //publishedAt, 
+    formalTicketPrice, 
+    //formalTicketDietary, 
+    formalTicketCollege, 
+    formalTicketDate, 
+    //formalTicketTime, 
+    //formalTicketID, 
+    formalEventName,
+    sellerEmail: sellerUser?.email 
+    //bought
+  }));
+  
+  console.log("simplified cart is:", simplifiedCart);
+  
+
+  //for being able to figure out who the seller users of each tickets are, need to include cart in metadata i think
+
   try {
     // Create line items based on cart items
     const lineItems = cart.map(ticket => ({
@@ -716,11 +766,12 @@ app.post('/create-checkout-session-multiple', async (req, res) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `http://localhost:3006/successPage/${totalCartIds}?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `http://localhost:3002/successPage/${totalCartIds}?session_id={CHECKOUT_SESSION_ID}`,
       /*cancel_url: `${YOUR_DOMAIN}/cancel`,*/
       metadata: {
         ticketIds: `${totalCartIds}`, // Comma-separated ticket IDs
         buyerUserId: `${user.user.id}`,  // Buyer user ID
+        cart: JSON.stringify(simplifiedCart),  // Convert cart array to string
       },
     });
     console.log("session created and about to be returned from backend is:", session);
