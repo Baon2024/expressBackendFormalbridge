@@ -156,7 +156,9 @@ export async function setTicketBought(ticket, jwtToken) {
 export async function fetchTicketsData() {
 
     //const url = 'http://localhost:1338/api/formal-tickets?populate=*';
-    const url = `http://localhost:1338/api/formal-tickets?filters[bought][$eq]=false&populate=*`;
+    const url = `http://localhost:1338/api/formal-tickets?filters[bought][$eq]=false&populate=*&pagination[pageSize]=100`;
+    
+    //const url = `http://localhost:1338/api/formal-tickets?filters[bought][$eq]=false&populate=*?pagination[pageSize]=100`;
     //const url = 'http://localhost:1337/api/formal-tickets?populate=buyerUser,sellerUser,*';
     //const url = 'http://localhost:1337/api/formal-tickets?populate=buyerUser,sellerUser,formalTicketCollegeBackgroundImage,formalTicketQRCode';
     //'?populate=*' is required to return media
